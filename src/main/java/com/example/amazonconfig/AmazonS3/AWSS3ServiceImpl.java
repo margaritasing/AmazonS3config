@@ -8,6 +8,7 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,16 +28,21 @@ public class AWSS3ServiceImpl implements AWSS3Service{
     private static final Logger LOGGER = LoggerFactory.getLogger(AWSS3Service.class);
 
 
+    private final AmazonS3 amazonS3;
+
     @Autowired
-    private AmazonS3 amazonS3;
+    public AWSS3ServiceImpl(AmazonS3 amazonS3) {
+        this.amazonS3 = amazonS3;
+    }
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
 
+
     @Override
     public void uploadFile(MultipartFile file) {
-        File mainFile = new File(file.getOriginalFilename());
+        File mainFile = new File(Objects.requireNonNull(file.getOriginalFilename()));
         try(FileOutputStream stream = new FileOutputStream(mainFile)){
             stream.write(file.getBytes());
             String newFileName = System.currentTimeMillis() + "" + mainFile.getName();
@@ -55,8 +62,7 @@ public class AWSS3ServiceImpl implements AWSS3Service{
     public List<String> getObjectFromS3() {
         ListObjectsV2Result result = amazonS3.listObjectsV2(bucketName);
         List<S3ObjectSummary> objects = result.getObjectSummaries();
-        List<String> list = objects.stream().map(item -> item.getKey()).collect(Collectors.toList());
-        return list;
+        return objects.stream().map(S3ObjectSummary::getKey).collect(Collectors.toList());
 
     }
 
